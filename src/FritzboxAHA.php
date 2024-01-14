@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace sgoettsch\FritzboxAHA;
 
 use Exception;
-use PHPCurl\CurlWrapper\CurlInterface;
-use PHPCurl\CurlWrapper\Curl;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Psr7\Request;
 use SimpleXMLElement;
 
 /**
@@ -20,8 +21,6 @@ class FritzboxAHA
     private string $loginUrl = "http://%s/login_sid.lua";
     /** @noinspection HttpUrlsUsage */
     private string $ahaUrl = "http://%s/webservices/homeautoswitch.lua?switchcmd=%s&sid=%s";
-    //protected $aha_url = "http://%s/webservices/homeautoswitch.lua?switchcmd=%s&sid=%s&ain=%s&param=%s";
-    private Curl|CurlInterface $curl;
     private string $host;
     private bool $useSsl;
     private bool $checkCert;
@@ -29,18 +28,8 @@ class FritzboxAHA
     private string $password;
     private string $sid;
 
-    public function __construct(
-        CurlInterface $curl = null
-    ) {
-        if ($curl === null) {
-            $curl = new Curl;
-        }
-
-        $this->curl = $curl;
-    }
-
     /**
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function login(
         string $host,
@@ -70,7 +59,7 @@ class FritzboxAHA
     }
 
     /**
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     private function getSessionId(): string
     {
@@ -80,17 +69,9 @@ class FritzboxAHA
             $url = preg_replace("/^http:/", "https:", $url);
         }
 
-        $this->curl->init($url);
-        $this->curl->setOpt(CURLOPT_RETURNTRANSFER, 1);
+        $resp = $this->doRequest($url);
 
-        if ($this->useSsl && !$this->checkCert) {
-            $this->curl->setOpt(CURLOPT_SSL_VERIFYHOST, 0);
-            $this->curl->setOpt(CURLOPT_SSL_VERIFYPEER, 0);
-        }
-
-        $resp = $this->curl->exec();
-
-        if (is_bool($resp)) {
+        if (empty($resp)) {
             throw new Exception('Failed to get sid');
         }
 
@@ -99,10 +80,14 @@ class FritzboxAHA
         if (isset($sess->Challenge, $sess->SID) && $sess->SID == "0000000000000000") {
             $challenge = (string)$sess->Challenge;
             $response = $this->getChallengeResponse($challenge);
-            $this->curl->setOpt(CURLOPT_POSTFIELDS, "username=$this->user&response=$response&page=/login_sid.lua");
-            $login = $this->curl->exec();
 
-            if (is_bool($login)) {
+            $login = $this->doRequest($url, 'POST', [
+                'username' => $this->user,
+                'response' => $response,
+                'page' => '/login_sid.lua'
+            ]);
+
+            if (empty($login)) {
                 throw new Exception('Could not get sid');
             }
 
@@ -152,17 +137,9 @@ class FritzboxAHA
                 $url .= sprintf("&param=%d", $param);
             }
 
-            $this->curl->init($url);
-            $this->curl->setOpt(CURLOPT_RETURNTRANSFER, 1);
+            $resp = $this->doRequest($url);
 
-            if ($this->useSsl && !$this->checkCert) {
-                $this->curl->setOpt(CURLOPT_SSL_VERIFYHOST, 0);
-                $this->curl->setOpt(CURLOPT_SSL_VERIFYPEER, 0);
-            }
-
-            $resp = $this->curl->exec();
-
-            if (!is_bool($resp)) {
+            if (!empty($resp)) {
                 return trim($resp);
             }
         }
@@ -395,5 +372,17 @@ class FritzboxAHA
     public function getSwitchName(string $ain): bool|string
     {
         return $this->sendCommand("getswitchname", $ain);
+    }
+
+    /**
+     * @throws GuzzleException
+     * @throws \JsonException
+     */
+    private function doRequest($url, $type = 'GET', $payload = [], $headers = []): string
+    {
+        $client = new Client(['verify' => $this->checkCert]);
+        $request = new Request($type, $url, $headers, json_encode($payload, JSON_THROW_ON_ERROR));
+
+        return (string)$client->send($request, ['timeout' => 10])->getBody();
     }
 }
