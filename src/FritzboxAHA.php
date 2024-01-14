@@ -66,7 +66,7 @@ class FritzboxAHA
         $url = sprintf($this->loginUrl, $this->host);
 
         if ($this->useSsl) {
-            $url = preg_replace("/^http:/", "https:", $url);
+            $url = (string)preg_replace("/^http:/", "https:", $url);
         }
 
         $resp = $this->doRequest($url);
@@ -124,7 +124,7 @@ class FritzboxAHA
             $url = sprintf($this->ahaUrl, $this->host, $cmd, $this->sid, $ain, $param);
 
             if ($this->useSsl) {
-                $url = preg_replace("/^http:/", "https:", $url);
+                $url = (string)preg_replace("/^http:/", "https:", $url);
             }
 
             if ($ain) {
