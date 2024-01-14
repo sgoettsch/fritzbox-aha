@@ -81,11 +81,9 @@ class FritzboxAHA
             $challenge = (string)$sess->Challenge;
             $response = $this->getChallengeResponse($challenge);
 
-            $login = $this->doRequest($url, 'POST', [
-                'username' => $this->user,
-                'response' => $response,
-                'page' => '/login_sid.lua'
-            ]);
+            $login = $this->doRequest(
+                $url.'?username=' . $this->user . '&response=' . $response
+            );
 
             if (empty($login)) {
                 throw new Exception('Could not get sid');
@@ -376,12 +374,11 @@ class FritzboxAHA
 
     /**
      * @throws GuzzleException
-     * @throws \JsonException
      */
-    private function doRequest($url, $type = 'GET', $payload = [], $headers = []): string
+    private function doRequest(string $url, string $payload = ''): string
     {
         $client = new Client(['verify' => $this->checkCert]);
-        $request = new Request($type, $url, $headers, json_encode($payload, JSON_THROW_ON_ERROR));
+        $request = new Request('GET', $url, [], $payload);
 
         return (string)$client->send($request, ['timeout' => 10])->getBody();
     }
