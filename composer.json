@@ -20,9 +20,9 @@
     },
     "require": {
         "php": ">=8.1",
-        "phpcurl/curlwrapper": "^3.0",
         "ext-curl": "*",
-        "ext-simplexml": "*"
+        "ext-simplexml": "*",
+        "guzzlehttp/guzzle": "^7.8"
     },
     "require-dev": {
         "phpmd/phpmd": "^2.5",

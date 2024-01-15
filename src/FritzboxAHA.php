@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace sgoettsch\FritzboxAHA;
 
 use Exception;
-use PHPCurl\CurlWrapper\CurlInterface;
-use PHPCurl\CurlWrapper\Curl;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Psr7\Request;
 use SimpleXMLElement;
 
 /**
@@ -16,44 +17,41 @@ use SimpleXMLElement;
  */
 class FritzboxAHA
 {
+    private Client $client;
     /** @noinspection HttpUrlsUsage */
     private string $loginUrl = "http://%s/login_sid.lua";
     /** @noinspection HttpUrlsUsage */
     private string $ahaUrl = "http://%s/webservices/homeautoswitch.lua?switchcmd=%s&sid=%s";
-    //protected $aha_url = "http://%s/webservices/homeautoswitch.lua?switchcmd=%s&sid=%s&ain=%s&param=%s";
-    private Curl|CurlInterface $curl;
     private string $host;
     private bool $useSsl;
-    private bool $checkCert;
     private string $user;
     private string $password;
     private string $sid;
 
     public function __construct(
-        CurlInterface $curl = null
+        ?Client $client = null,
+        bool $checkCert = true
     ) {
-        if ($curl === null) {
-            $curl = new Curl;
+        if (!is_null($client)) {
+            $this->client = $client;
+        } else {
+            $this->client = new Client(['verify' => $checkCert]);
         }
-
-        $this->curl = $curl;
     }
 
     /**
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function login(
         string $host,
         string $user,
         string $password,
-        bool $useSsl = false,
-        bool $checkCert = true
+        bool $useSsl = false
     ): void {
         $this->host = $host;
         $this->user = $user;
         $this->password = $password;
         $this->useSsl = $useSsl;
-        $this->checkCert = $checkCert;
         $this->sid = $this->getSessionId();
     }
 
@@ -70,27 +68,19 @@ class FritzboxAHA
     }
 
     /**
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     private function getSessionId(): string
     {
         $url = sprintf($this->loginUrl, $this->host);
 
         if ($this->useSsl) {
-            $url = preg_replace("/^http:/", "https:", $url);
+            $url = (string)preg_replace("/^http:/", "https:", $url);
         }
 
-        $this->curl->init($url);
-        $this->curl->setOpt(CURLOPT_RETURNTRANSFER, 1);
+        $resp = $this->doRequest($url);
 
-        if ($this->useSsl && !$this->checkCert) {
-            $this->curl->setOpt(CURLOPT_SSL_VERIFYHOST, 0);
-            $this->curl->setOpt(CURLOPT_SSL_VERIFYPEER, 0);
-        }
-
-        $resp = $this->curl->exec();
-
-        if (is_bool($resp)) {
+        if (empty($resp)) {
             throw new Exception('Failed to get sid');
         }
 
@@ -99,10 +89,12 @@ class FritzboxAHA
         if (isset($sess->Challenge, $sess->SID) && $sess->SID == "0000000000000000") {
             $challenge = (string)$sess->Challenge;
             $response = $this->getChallengeResponse($challenge);
-            $this->curl->setOpt(CURLOPT_POSTFIELDS, "username=$this->user&response=$response&page=/login_sid.lua");
-            $login = $this->curl->exec();
 
-            if (is_bool($login)) {
+            $login = $this->doRequest(
+                $url . '?username=' . $this->user . '&response=' . $response
+            );
+
+            if (empty($login)) {
                 throw new Exception('Could not get sid');
             }
 
@@ -133,7 +125,7 @@ class FritzboxAHA
     }
 
     /**
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     private function sendCommand(string $cmd, string $ain = "", string $param = ""): string
     {
@@ -141,7 +133,7 @@ class FritzboxAHA
             $url = sprintf($this->ahaUrl, $this->host, $cmd, $this->sid, $ain, $param);
 
             if ($this->useSsl) {
-                $url = preg_replace("/^http:/", "https:", $url);
+                $url = (string)preg_replace("/^http:/", "https:", $url);
             }
 
             if ($ain) {
@@ -152,27 +144,19 @@ class FritzboxAHA
                 $url .= sprintf("&param=%d", $param);
             }
 
-            $this->curl->init($url);
-            $this->curl->setOpt(CURLOPT_RETURNTRANSFER, 1);
+            $resp = $this->doRequest($url);
 
-            if ($this->useSsl && !$this->checkCert) {
-                $this->curl->setOpt(CURLOPT_SSL_VERIFYHOST, 0);
-                $this->curl->setOpt(CURLOPT_SSL_VERIFYPEER, 0);
-            }
-
-            $resp = $this->curl->exec();
-
-            if (!is_bool($resp)) {
+            if (!empty($resp)) {
                 return trim($resp);
             }
         }
 
-        throw new Exception($cmd.' failed');
+        throw new Exception($cmd . ' failed');
     }
 
     /**
      * Returns information for all known devices
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function getDeviceList(): SimpleXMLElement|bool
     {
@@ -187,7 +171,7 @@ class FritzboxAHA
 
     /**
      * Gets current temperature for device or group
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function getTemperature(string $ain): float|int
     {
@@ -195,7 +179,7 @@ class FritzboxAHA
     }
 
     /**
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     private function getTemperatureHkr(string $ain, string $type): float|int|string
     {
@@ -214,7 +198,7 @@ class FritzboxAHA
 
     /**
      * Gets aimed temperature for device or group
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function getTemperatureSoll(string $ain): float|int|string
     {
@@ -223,7 +207,7 @@ class FritzboxAHA
 
     /**
      * Gets temperature for comfort-heating interval
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function getTemperatureComfort(string $ain): float|int|string
     {
@@ -232,7 +216,7 @@ class FritzboxAHA
 
     /**
      * Gets temperature for non-heating interval
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function getTemperatureLow(string $ain): float|int|string
     {
@@ -241,7 +225,7 @@ class FritzboxAHA
 
     /**
      * Sets temperature for device or group
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function setTemperature(string $ain, int $temp): bool|string
     {
@@ -259,7 +243,7 @@ class FritzboxAHA
 
     /**
      * Turns heating on for device or group
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function setHeatingOn(string $ain): bool|string
     {
@@ -268,7 +252,7 @@ class FritzboxAHA
 
     /**
      * Turns heating off for device or group
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function setHeatingOff(string $ain): bool|string
     {
@@ -277,7 +261,7 @@ class FritzboxAHA
 
     /**
      * Returns all known devices
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function getAllDevices(): array
     {
@@ -302,9 +286,9 @@ class FritzboxAHA
 
     /**
      * Returns all known device groups
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
-    public function getAllGroups(): SimpleXMLElement
+    public function getAllGroups(): array
     {
         $devices = $this->getDeviceList();
 
@@ -312,12 +296,21 @@ class FritzboxAHA
             throw new Exception('Could not get devices');
         }
 
-        return $devices->group;
+        $ret = [];
+
+        foreach ($devices->group as $group) {
+            $ret[] = [
+                "name" => (string)$group->name,
+                "aid" => (string)$group["identifier"],
+            ];
+        }
+
+        return $ret;
     }
 
     /**
      * Returns AIN/MAC of all known switches
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function getAllSwitches(): array
     {
@@ -327,7 +320,7 @@ class FritzboxAHA
 
     /**
      * Turn switch on
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function setSwitchOn(string $ain): bool|string
     {
@@ -336,7 +329,7 @@ class FritzboxAHA
 
     /**
      * Turn switch off
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function setSwitchOff(string $ain): bool|string
     {
@@ -345,7 +338,7 @@ class FritzboxAHA
 
     /**
      * Toggle switch state
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function setSwitchToggle(string $ain): bool|string
     {
@@ -354,7 +347,7 @@ class FritzboxAHA
 
     /**
      * Get power state of switch
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function getSwitchState(string $ain): bool|string
     {
@@ -363,7 +356,7 @@ class FritzboxAHA
 
     /**
      * Is the switch connected
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function isSwitchPresent(string $ain): bool
     {
@@ -372,7 +365,7 @@ class FritzboxAHA
 
     /**
      * Get current power consumption in mW
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function getSwitchPower(string $ain): bool|string
     {
@@ -381,7 +374,7 @@ class FritzboxAHA
 
     /**
      * Get total power consumption since last reset in Wh
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function getSwitchEnergy(string $ain): bool|string
     {
@@ -390,10 +383,25 @@ class FritzboxAHA
 
     /**
      * Get switch name
-     * @throws Exception
+     * @throws Exception|GuzzleException
      */
     public function getSwitchName(string $ain): bool|string
     {
         return $this->sendCommand("getswitchname", $ain);
+    }
+
+    public function setPassword(string $password): void
+    {
+        $this->password = $password;
+    }
+
+    /**
+     * @throws GuzzleException
+     */
+    private function doRequest(string $url): string
+    {
+        $request = new Request('GET', $url);
+
+        return (string)$this->client->send($request, ['timeout' => 10])->getBody();
     }
 }
