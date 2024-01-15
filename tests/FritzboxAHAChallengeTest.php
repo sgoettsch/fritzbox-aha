@@ -6,8 +6,6 @@ namespace sgoettsch\FritzboxAHATest;
 use GuzzleHttp\Psr7\Response;
 use \sgoettsch\FritzboxAHA\FritzboxAHA;
 
-include_once __DIR__.'/../vendor/autoload.php';
-
 class FritzboxAHAChallengeTest extends \PHPUnit\Framework\TestCase
 {
     protected array $data;
