@@ -30,7 +30,7 @@
         "squizlabs/php_codesniffer": "*"
     },
     "scripts": {
-        "test": "php vendor/bin/phpunit",
+        "test": "php vendor/bin/phpunit --fail-on-deprecation",
         "phpcs": "php vendor/bin/phpcs",
         "phpmd": "php vendor/bin/phpmd src/,tests/,examples/ text cleancode,codesize,controversial,design,naming,unusedcode"
     }
