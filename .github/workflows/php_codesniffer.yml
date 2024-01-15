@@ -15,5 +15,5 @@ jobs:
       - name: Composer
         run: composer install
 
-      - name: Composer
+      - name: PHPCS
         run: composer phpcs
