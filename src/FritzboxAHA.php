@@ -288,7 +288,7 @@ class FritzboxAHA
      * Returns all known device groups
      * @throws Exception|GuzzleException
      */
-    public function getAllGroups(): SimpleXMLElement
+    public function getAllGroups(): array
     {
         $devices = $this->getDeviceList();
 
@@ -296,7 +296,16 @@ class FritzboxAHA
             throw new Exception('Could not get devices');
         }
 
-        return $devices->group;
+        $ret = [];
+
+        foreach ($devices->group as $group) {
+            $ret[] = [
+                "name" => (string)$group->name,
+                "aid" => (string)$group["identifier"],
+            ];
+        }
+
+        return $ret;
     }
 
     /**
