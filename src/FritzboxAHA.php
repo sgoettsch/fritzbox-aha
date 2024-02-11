@@ -34,9 +34,10 @@ class FritzboxAHA
     ) {
         if (!is_null($client)) {
             $this->client = $client;
-        } else {
-            $this->client = new Client(['verify' => $checkCert]);
+            return;
         }
+
+        $this->client = new Client(['verify' => $checkCert]);
     }
 
     /**
@@ -274,10 +275,32 @@ class FritzboxAHA
         $ret = [];
 
         foreach ($devices->device as $device) {
+            $battery = (string)$device->battery;
+            $comfort = (string)$device->hkr->komfort;
+            $lowering = (string)$device->hkr->absenk;
+            $target = (string)$device->hkr->tsoll;
+            $windowOpenActive = (bool)(string)$device->hkr->windowopenactiv;
+            $boostActive = (bool)(string)$device->hkr->boostactive;
+            $nextChangeEndPeriod = (int)$device->hkr->nextchange->endperiod;
+            $nextChangeTemp = (int)$device->hkr->nextchange->tchange;
+
             $ret[] = [
-                "name" => (string)$device->name,
-                "aid" => (string)$device["identifier"],
-                "type" => (string)$device["functionbitmask"],
+                'name' => (string)$device->name,
+                'productName' => (string)$device["productname"],
+                'aid' => (string)$device["identifier"],
+                'type' => (int)$device["functionbitmask"],
+                'battery' => empty($battery) ? null : (int)$battery,
+                'temperature' => [
+                    'comfort' => empty($comfort) ? null : (float)$comfort / 2,
+                    'lowering' => empty($lowering) ? null : (float)$lowering / 2,
+                    'target' => empty($target) ? null : (float)$target / 2,
+                    'windowOpenActive' => $windowOpenActive,
+                    'boostActive' => $boostActive,
+                    'nextChange' => [
+                        'endPeriod' => $nextChangeEndPeriod,
+                        'temperature' => empty($nextChangeTemp) ? null : (float)$nextChangeTemp / 2,
+                    ],
+                ],
             ];
         }
 
