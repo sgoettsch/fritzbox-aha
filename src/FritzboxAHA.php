@@ -276,13 +276,13 @@ class FritzboxAHA
 
         foreach ($devices->device as $device) {
             $battery = (string)$device->battery;
-            $comfort = (string)$device->hkr->komfort ?? null;
-            $lowering = (string)$device->hkr->absenk ?? null;
-            $target = (string)$device->hkr->tsoll ?? null;
-            $windowOpenActive = (bool)(string)$device->hkr->windowopenactiv ?? null;
-            $boostActive = (bool)(string)$device->hkr->boostactive ?? null;
-            $nextChangeEndPeriod = (int)$device->hkr->nextchange->endperiod ?? null;
-            $nextChangeTemp = (int)$device->hkr->nextchange->tchange ?? null;
+            $comfort = (string)$device->hkr->komfort;
+            $lowering = (string)$device->hkr->absenk;
+            $target = (string)$device->hkr->tsoll;
+            $windowOpenActive = (bool)(string)$device->hkr->windowopenactiv;
+            $boostActive = (bool)(string)$device->hkr->boostactive;
+            $nextChangeEndPeriod = (int)$device->hkr->nextchange->endperiod;
+            $nextChangeTemp = (int)$device->hkr->nextchange->tchange;
 
             $ret[] = [
                 'name' => (string)$device->name,
