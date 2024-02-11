@@ -30,7 +30,20 @@ class FritzboxAHADeviceListTest extends \PHPUnit\Framework\TestCase
             [
                 'name' => 'Wohnzimmer',
                 'aid' => '11111 1234567',
-                'type' => '320',
+                'type' => 320,
+                'battery' => 75,
+                'productName' => 'FRITZ!DECT 300',
+                'temperature' => [
+                    'comfort' => 20.0,
+                    'lowering' => 19.0,
+                    'target' => 22.0,
+                    'windowOpenActive' => false,
+                    'boostActive' => false,
+                    'nextChange' => [
+                        'endPeriod' => 1705654800,
+                        'temperature' => 20.0
+                    ]
+                ]
             ],
         ], $devices);
     }
