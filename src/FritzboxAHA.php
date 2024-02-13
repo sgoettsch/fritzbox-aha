@@ -281,8 +281,8 @@ class FritzboxAHA
             $target = (string)$device->hkr->tsoll;
             $windowOpenActive = (bool)(string)$device->hkr->windowopenactiv;
             $boostActive = (bool)(string)$device->hkr->boostactive;
-            $nextChangeEndPeriod = (int)$device->hkr->nextchange->endperiod;
-            $nextChangeTemp = (int)$device->hkr->nextchange->tchange;
+            $nextChangeEndPeriod = $device->hkr->nextchange->endperiod ?? null;
+            $nextChangeTemp = $device->hkr->nextchange->tchange ?? null;
 
             $ret[] = [
                 'name' => (string)$device->name,
@@ -297,8 +297,8 @@ class FritzboxAHA
                     'windowOpenActive' => $windowOpenActive,
                     'boostActive' => $boostActive,
                     'nextChange' => [
-                        'endPeriod' => $nextChangeEndPeriod,
-                        'temperature' => empty($nextChangeTemp) ? null : (float)$nextChangeTemp / 2,
+                        'endPeriod' => (int)$nextChangeEndPeriod ?? null,
+                        'temperature' => (float) ((int)$nextChangeTemp / 2) ?? null,
                     ],
                 ],
             ];
