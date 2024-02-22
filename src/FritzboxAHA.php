@@ -297,8 +297,8 @@ class FritzboxAHA
                     'windowOpenActive' => $windowOpenActive,
                     'boostActive' => $boostActive,
                     'nextChange' => [
-                        'endPeriod' => (int)$nextChangeEndPeriod ?? null,
-                        'temperature' => (float) ((int)$nextChangeTemp / 2) ?? null,
+                        'endPeriod' => empty($nextChangeEndPeriod) ? null : (int)$nextChangeEndPeriod,
+                        'temperature' => empty($nextChangeTemp) ? null : (float) ((int)$nextChangeTemp / 2),
                     ],
                 ],
             ];
