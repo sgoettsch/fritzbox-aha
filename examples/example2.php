@@ -1,45 +1,43 @@
 <?php
-declare(strict_types = 1);
 
-require("../vendor/autoload.php");
+declare(strict_types=1);
 
-use \sgoettsch\FritzboxAHA\FritzboxAHA;
+include_once __DIR__ . '/../vendor/autoload.php';
+
+use sgoettsch\FritzboxAHA\FritzboxAHA;
+use sgoettsch\FritzboxAHA\FritzboxAHADevice;
 
 $aha = new FritzboxAHA();
 
 $aha->login("fritz.box", "", "password");
 
-echo "Session id: " . $aha->getSid() . "\n\n";
+echo "Session id: " . $aha->getSid() . "\n";
 
-$switches = $aha->getAllSwitches();
-foreach ($switches as $switch) {
-    echo "Switch AIN: " . $switch . "\n";
+/** @var FritzboxAHADevice $device */
+$device = $aha->getDevice('117950204064');
+$batteryLevel = $device->getBatteryLevel();
+$humidity = $device->getHumidity();
+$measuredTemperature = $device->getMeasuredTemperature();
+$targetTemperature = $device->getTargetTemperature();
 
-    echo "Switch name: " . $aha->getSwitchName($switch) . "\n";
+echo 'Device: ' . $device->getName() . "\n";
+echo 'Identifier: ' . $device->getIdentifier() . "\n";
+echo 'Manufacturer: ' . $device->getManufacturer() . "\n";
+echo 'Product: ' . $device->getProductName() . "\n";
+echo 'Firmware Version: ' . $device->getFirmwareVersion() . "\n";
 
-    echo "Switch is present: " . $aha->isSwitchPresent($switch) . "\n";
-
-    echo "Switch state: " . $aha->getSwitchState($switch) . "\n";
-
-    echo "Current power consumption: " . $aha->getSwitchPower($switch) . " mW\n";
-
-    echo "Total power consumption: " . $aha->getSwitchEnergy($switch) . " Wh\n";
-
-    echo "Turn on.\n";
-    $aha->setSwitchOn($switch);
-    sleep(2);
-
-    echo "Turn off.\n";
-    $aha->setSwitchOff($switch);
-    sleep(2);
-
-    echo "Toggle switch.\n\n";
-    $aha->setSwitchToggle($switch);
-    sleep(2);
+if ($batteryLevel !== null) {
+    echo 'Battery Level: ' . $batteryLevel . "%\n";
 }
 
-$devs = $aha->getAllDevices();
-foreach ($devs as $dev) {
-    $ain = $dev["aid"];
-    echo "AIN: " . $ain . "\n";
+if ($humidity !== null) {
+    echo 'Humidity: ' . $humidity . "%\n";
+}
+
+if ($measuredTemperature !== null) {
+    echo 'Measured Temperature: ' . $measuredTemperature . " Degree\n";
+}
+
+if ($targetTemperature !== null) {
+    echo 'Target Temperature: ' . ($targetTemperature === -1.0 ? 'off' : $targetTemperature . ' Degree') . "\n";
 }

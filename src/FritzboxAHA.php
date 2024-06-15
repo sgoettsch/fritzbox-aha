@@ -8,13 +8,7 @@ use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\Request;
-use SimpleXMLElement;
 
-/**
- * Class FritzboxAHA
- * @package sgoettsch\FritzboxAHA
- * @SuppressWarnings(PHPMD.BooleanArgumentFlag)
- */
 class FritzboxAHA
 {
     private Client $client;
@@ -27,6 +21,7 @@ class FritzboxAHA
     private string $user;
     private string $password;
     private string $sid;
+    private array $devices;
 
     public function __construct(
         ?Client $client = null,
@@ -53,7 +48,7 @@ class FritzboxAHA
         $this->user = $user;
         $this->password = $password;
         $this->useSsl = $useSsl;
-        $this->sid = $this->getSessionId();
+        $this->setSid($this->getSessionId());
     }
 
     public function getChallengeResponse(string $challenge): string
@@ -109,18 +104,12 @@ class FritzboxAHA
         return (string)$sess->SID;
     }
 
-    /**
-     * Set session id
-     */
     public function getSid(): string
     {
         return $this->sid;
     }
 
-    /**
-     * Set session id
-     */
-    public function setSid(string $sid): void
+    private function setSid(string $sid): void
     {
         $this->sid = $sid;
     }
@@ -138,7 +127,7 @@ class FritzboxAHA
             }
 
             if ($ain) {
-                $url .= sprintf("&ain=%s", $ain);
+                $url .= sprintf("&ain=%s", $this->cleanIdentifier($ain));
             }
 
             if ($param) {
@@ -156,261 +145,53 @@ class FritzboxAHA
     }
 
     /**
-     * Returns information for all known devices
-     * @throws Exception|GuzzleException
-     */
-    public function getDeviceList(): SimpleXMLElement|bool
-    {
-        $resp = $this->sendCommand("getdevicelistinfos");
-
-        if ($resp) {
-            return simplexml_load_string($resp);
-        }
-
-        return false;
-    }
-
-    /**
-     * Gets current temperature for device or group
-     * @throws Exception|GuzzleException
-     */
-    public function getTemperature(string $ain): float|int
-    {
-        return (int)$this->sendCommand("gettemperature", $ain) / 10;
-    }
-
-    /**
-     * @throws Exception|GuzzleException
-     */
-    private function getTemperatureHkr(string $ain, string $type): float|int|string
-    {
-        $temp = (int)$this->sendCommand($type, $ain);
-
-        if ($temp == 254) {
-            return "on";
-        }
-
-        if ($temp == 253) {
-            return "off";
-        }
-
-        return $temp / 2;
-    }
-
-    /**
-     * Gets aimed temperature for device or group
-     * @throws Exception|GuzzleException
-     */
-    public function getTemperatureSoll(string $ain): float|int|string
-    {
-        return $this->getTemperatureHkr($ain, "gethkrtsoll");
-    }
-
-    /**
-     * Gets temperature for comfort-heating interval
-     * @throws Exception|GuzzleException
-     */
-    public function getTemperatureComfort(string $ain): float|int|string
-    {
-        return $this->getTemperatureHkr($ain, "gethkrkomfort");
-    }
-
-    /**
-     * Gets temperature for non-heating interval
-     * @throws Exception|GuzzleException
-     */
-    public function getTemperatureLow(string $ain): float|int|string
-    {
-        return $this->getTemperatureHkr($ain, "gethkrabsenk");
-    }
-
-    /**
-     * Sets temperature for device or group
-     * @throws Exception|GuzzleException
-     */
-    public function setTemperature(string $ain, int $temp): bool|string
-    {
-        if ($temp >= 8 && $temp <= 28) {
-            $param = (string)floor($temp * 2);
-            return $this->sendCommand("sethkrtsoll", $ain, $param);
-        }
-
-        if ($temp == 253 || $temp == 254) {
-            return $this->sendCommand("sethkrtsoll", $ain, (string)$temp);
-        }
-
-        return false;
-    }
-
-    /**
-     * Turns heating on for device or group
-     * @throws Exception|GuzzleException
-     */
-    public function setHeatingOn(string $ain): bool|string
-    {
-        return $this->setTemperature($ain, 254);
-    }
-
-    /**
-     * Turns heating off for device or group
-     * @throws Exception|GuzzleException
-     */
-    public function setHeatingOff(string $ain): bool|string
-    {
-        return $this->setTemperature($ain, 253);
-    }
-
-    /**
-     * Returns all known devices
-     * @throws Exception|GuzzleException
+     * @throws GuzzleException|Exception
      */
     public function getAllDevices(): array
     {
-        $devices = $this->getDeviceList();
+        if (!empty($this->devices)) {
+            return $this->devices;
+        }
+
+        $requestResponse = $this->sendCommand("getdevicelistinfos");
+
+        if (!$requestResponse) {
+            throw new Exception('Could not get device list');
+        }
+
+        $devices = simplexml_load_string($requestResponse);
 
         if (!isset($devices->device)) {
             throw new Exception('Could not get device list');
         }
 
-        $ret = [];
+        $deviceList = [];
 
-        foreach ($devices->device as $device) {
-            $battery = (string)$device->battery;
-            $comfort = (string)$device->hkr->komfort;
-            $lowering = (string)$device->hkr->absenk;
-            $target = (string)$device->hkr->tsoll;
-            $windowOpenActive = (bool)(string)$device->hkr->windowopenactiv;
-            $boostActive = (bool)(string)$device->hkr->boostactive;
-            $nextChangeEndPeriod = $device->hkr->nextchange->endperiod ?? null;
-            $nextChangeTemp = $device->hkr->nextchange->tchange ?? null;
-
-            $ret[] = [
-                'name' => (string)$device->name,
-                'productName' => (string)$device["productname"],
-                'aid' => (string)$device["identifier"],
-                'type' => (int)$device["functionbitmask"],
-                'battery' => empty($battery) ? null : (int)$battery,
-                'temperature' => [
-                    'comfort' => empty($comfort) ? null : (float)$comfort / 2,
-                    'lowering' => empty($lowering) ? null : (float)$lowering / 2,
-                    'target' => empty($target) ? null : (float)$target / 2,
-                    'windowOpenActive' => $windowOpenActive,
-                    'boostActive' => $boostActive,
-                    'nextChange' => [
-                        'endPeriod' => empty($nextChangeEndPeriod) ? null : (int)$nextChangeEndPeriod,
-                        'temperature' => empty($nextChangeTemp) ? null : (float) ((int)$nextChangeTemp / 2),
-                    ],
-                ],
-            ];
+        foreach ($devices->device as $deviceData) {
+            $deviceList[] = new FritzboxAHADevice($deviceData);
         }
 
-        return $ret;
+        $this->devices = $deviceList;
+
+        return $deviceList;
     }
 
     /**
-     * Returns all known device groups
-     * @throws Exception|GuzzleException
+     * @throws GuzzleException|Exception
      */
-    public function getAllGroups(): array
+    public function getDevice(string $identifier): FritzboxAHADevice
     {
-        $devices = $this->getDeviceList();
-
-        if (!isset($devices->group)) {
-            throw new Exception('Could not get devices');
+        $devices = $this->getAllDevices();
+        foreach ($devices as $device) {
+            /** @var FritzboxAHADevice $device */
+            if ($device->getIdentifier() === $identifier ||
+                $this->cleanIdentifier($device->getIdentifier()) === $this->cleanIdentifier($identifier)
+            ) {
+                return $device;
+            }
         }
 
-        $ret = [];
-
-        foreach ($devices->group as $group) {
-            $ret[] = [
-                "name" => (string)$group->name,
-                "aid" => (string)$group["identifier"],
-            ];
-        }
-
-        return $ret;
-    }
-
-    /**
-     * Returns AIN/MAC of all known switches
-     * @throws Exception|GuzzleException
-     */
-    public function getAllSwitches(): array
-    {
-        $switches = $this->sendCommand("getswitchlist");
-        return explode(",", $switches);
-    }
-
-    /**
-     * Turn switch on
-     * @throws Exception|GuzzleException
-     */
-    public function setSwitchOn(string $ain): bool|string
-    {
-        return $this->sendCommand("setswitchon", $ain);
-    }
-
-    /**
-     * Turn switch off
-     * @throws Exception|GuzzleException
-     */
-    public function setSwitchOff(string $ain): bool|string
-    {
-        return $this->sendCommand("setswitchoff", $ain);
-    }
-
-    /**
-     * Toggle switch state
-     * @throws Exception|GuzzleException
-     */
-    public function setSwitchToggle(string $ain): bool|string
-    {
-        return $this->sendCommand("setswitchtoggle", $ain);
-    }
-
-    /**
-     * Get power state of switch
-     * @throws Exception|GuzzleException
-     */
-    public function getSwitchState(string $ain): bool|string
-    {
-        return $this->sendCommand("getswitchstate", $ain);
-    }
-
-    /**
-     * Is the switch connected
-     * @throws Exception|GuzzleException
-     */
-    public function isSwitchPresent(string $ain): bool
-    {
-        return (bool)$this->sendCommand("getswitchpresent", $ain);
-    }
-
-    /**
-     * Get current power consumption in mW
-     * @throws Exception|GuzzleException
-     */
-    public function getSwitchPower(string $ain): bool|string
-    {
-        return $this->sendCommand("getswitchpower", $ain);
-    }
-
-    /**
-     * Get total power consumption since last reset in Wh
-     * @throws Exception|GuzzleException
-     */
-    public function getSwitchEnergy(string $ain): bool|string
-    {
-        return $this->sendCommand("getswitchenergy", $ain);
-    }
-
-    /**
-     * Get switch name
-     * @throws Exception|GuzzleException
-     */
-    public function getSwitchName(string $ain): bool|string
-    {
-        return $this->sendCommand("getswitchname", $ain);
+        throw new Exception('Could not get device');
     }
 
     public function setPassword(string $password): void
@@ -426,5 +207,134 @@ class FritzboxAHA
         $request = new Request('GET', $url);
 
         return (string)$this->client->send($request, ['timeout' => 10])->getBody();
+    }
+
+    private function cleanIdentifier(string $identifier): string
+    {
+        return str_replace(' ', '', $identifier);
+    }
+
+    /**
+     * Sets temperature for device or group
+     *
+     * $temp can be:
+     * - 8 - 28 to set to this degree
+     * - 254 = ON , 253 = OFF
+     *
+     * @throws Exception|GuzzleException
+     */
+    public function setTemperature(string $identifier, int $temp): bool|string
+    {
+        if ($temp >= 8 && $temp <= 28) {
+            $param = floor($temp * 2);
+            return $this->sendCommand("sethkrtsoll", $identifier, (string)$param);
+        }
+
+        if ($temp == 253 || $temp == 254) {
+            return $this->sendCommand("sethkrtsoll", $identifier, (string)$temp);
+        }
+
+        return false;
+    }
+
+    /**
+     * Set max temperature for device or group
+     *
+     * @throws Exception|GuzzleException
+     * @noinspection PhpUnused
+     */
+    public function setMaxTemperature(string $identifier): bool|string
+    {
+        return $this->setTemperature($identifier, 254);
+    }
+
+    /**
+     * Turns heating off for device or group
+     *
+     * @throws Exception|GuzzleException
+     * @noinspection PhpUnused
+     */
+    public function setHeatingOff(string $identifier): bool|string
+    {
+        return $this->setTemperature($identifier, 253);
+    }
+
+    /**
+     * Returns all known device groups
+     *
+     * @throws Exception|GuzzleException
+     */
+    public function getAllGroups(): array
+    {
+        if (!empty($this->groups)) {
+            return $this->groups;
+        }
+
+        $requestResponse = $this->sendCommand("getdevicelistinfos");
+
+        if (!$requestResponse) {
+            throw new Exception('Could not get group list');
+        }
+
+        $groups = simplexml_load_string($requestResponse);
+
+        if (!isset($groups->group)) {
+            throw new Exception('Could not get group list');
+        }
+
+        $groupsList = [];
+
+        foreach ($groups->group as $group) {
+            $groupsList[] = [
+                'name' => $group->name->__toString(),
+                'identifier' => isset($group['identifier']) ? $group['identifier']->__toString() : '',
+            ];
+        }
+
+        return $groupsList;
+    }
+
+    /**
+     * Turn switch on
+     *
+     * @throws Exception|GuzzleException
+     * @noinspection PhpUnused
+     */
+    public function setSwitchOn(string $identifier): bool|string
+    {
+        return $this->sendCommand("setswitchon", $identifier);
+    }
+
+    /**
+     * Turn switch off
+     *
+     * @throws Exception|GuzzleException
+     * @noinspection PhpUnused
+     */
+    public function setSwitchOff(string $identifier): bool|string
+    {
+        return $this->sendCommand("setswitchoff", $identifier);
+    }
+
+    /**
+     * Toggle switch state
+     *
+     * @throws Exception|GuzzleException
+     * @noinspection PhpUnused
+     */
+    public function setSwitchToggle(string $identifier): bool|string
+    {
+        return $this->sendCommand("setswitchtoggle", $identifier);
+    }
+
+    /**
+     * Get power state of switch
+     *
+     * @throws Exception|GuzzleException
+     * @noinspection PhpUnused
+     */
+    public function getSwitchState(string $identifier): bool|string
+    {
+        return $this->sendCommand("getswitchstate", $identifier);
     }
 }
