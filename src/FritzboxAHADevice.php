@@ -18,6 +18,7 @@ class FritzboxAHADevice
     private string $identifier;
     private bool $isBatteryLevelLow;
     private bool $isPresent;
+    private bool $hasBattery;
     private ?int $humidity;
     private string $name;
     private string $manufacturer;
@@ -30,6 +31,7 @@ class FritzboxAHADevice
     ) {
         $this->setFunctionBitmask($data); // used by other functions so set this first
         $this->setDeviceType();
+        $this->setHasBattery();
 
         $this->setBatteryLevel($data);
         $this->setFirmwareVersion($data);
@@ -52,6 +54,11 @@ class FritzboxAHADevice
     public function getIdentifier(): string
     {
         return $this->identifier;
+    }
+
+    public function hasBattery(): bool
+    {
+        return $this->hasBattery;
     }
 
     public function getHumidity(): ?int
@@ -147,6 +154,14 @@ class FritzboxAHADevice
             1048864 => FritzboxAHADeviceTypes::FRITZ_DECT_440,
             237572 => FritzboxAHADeviceTypes::FRITZ_DECT_500,
             default => null,
+        };
+    }
+
+    private function setHasBattery(): void
+    {
+        $this->hasBattery = match ($this->getFunctionBitmask()) {
+            320, 1048864 => true,
+            default => false,
         };
     }
 
