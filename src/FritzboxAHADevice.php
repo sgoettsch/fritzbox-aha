@@ -11,7 +11,8 @@ use SimpleXMLElement;
 
 class FritzboxAHADevice
 {
-    private ?int $batteryLevel;
+    private ?int $batteryLevel = null;
+    private ?FritzboxAHADeviceTypes $deviceType;
     private string $firmwareVersion;
     private ?int $functionBitmask;
     private string $identifier;
@@ -28,6 +29,7 @@ class FritzboxAHADevice
         SimpleXMLElement $data
     ) {
         $this->setFunctionBitmask($data); // used by other functions so set this first
+        $this->setDeviceType();
 
         $this->setBatteryLevel($data);
         $this->setFirmwareVersion($data);
@@ -65,6 +67,11 @@ class FritzboxAHADevice
     public function getFunctionBitmask(): ?int
     {
         return $this->functionBitmask;
+    }
+
+    public function getDeviceType(): ?FritzboxAHADeviceTypes
+    {
+        return $this->deviceType;
     }
 
     public function getName(): string
@@ -130,6 +137,17 @@ class FritzboxAHADevice
         if (isset($data['functionbitmask'])) {
             $this->functionBitmask = (int)$data['functionbitmask']->__toString();
         }
+    }
+
+    private function setDeviceType(): void
+    {
+        $this->deviceType = match ($this->getFunctionBitmask()) {
+            35712 => FritzboxAHADeviceTypes::FRITZ_DECT_200,
+            320 => FritzboxAHADeviceTypes::FRITZ_DECT_300,
+            1048864 => FritzboxAHADeviceTypes::FRITZ_DECT_440,
+            237572 => FritzboxAHADeviceTypes::FRITZ_DECT_500,
+            default => null,
+        };
     }
 
     private function setHumidity(SimpleXMLElement $data): void
