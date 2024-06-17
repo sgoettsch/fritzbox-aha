@@ -8,6 +8,3 @@ parameters:
 	        - ./vendor/*
 	        - ./examples/*
 	        - ./tests/*
-
-	ignoreErrors:
-		- identifier: missingType.iterableValue

@@ -21,6 +21,8 @@ class FritzboxAHA
     private string $user;
     private string $password;
     private string $sid;
+
+    /** @var list<FritzboxAHADevice> */
     private array $devices;
 
     public function __construct(
@@ -145,6 +147,7 @@ class FritzboxAHA
     }
 
     /**
+     * @return list<FritzboxAHADevice>
      * @throws GuzzleException|Exception
      */
     public function getAllDevices(): array
@@ -262,6 +265,7 @@ class FritzboxAHA
     /**
      * Returns all known device groups
      *
+     * @return list<array{name: string, identifier: string}>
      * @throws Exception|GuzzleException
      */
     public function getAllGroups(): array
