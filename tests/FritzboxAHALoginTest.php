@@ -1,10 +1,11 @@
 <?php
-declare(strict_types = 1);
+
+declare(strict_types=1);
 
 namespace sgoettsch\FritzboxAHATest;
 
 use GuzzleHttp\Psr7\Response;
-use \sgoettsch\FritzboxAHA\FritzboxAHA;
+use sgoettsch\FritzboxAHA\FritzboxAHA;
 
 class FritzboxAHALoginTest extends \PHPUnit\Framework\TestCase
 {

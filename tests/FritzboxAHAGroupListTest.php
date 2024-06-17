@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace sgoettsch\FritzboxAHATest;
 
 use GuzzleHttp\Psr7\Response;
-use \sgoettsch\FritzboxAHA\FritzboxAHA;
+use sgoettsch\FritzboxAHA\FritzboxAHA;
 
 class FritzboxAHAGroupListTest extends \PHPUnit\Framework\TestCase
 {
@@ -29,7 +29,7 @@ class FritzboxAHAGroupListTest extends \PHPUnit\Framework\TestCase
         $this->assertEquals([
             [
                 'name' => 'Wohnzimmer',
-                'aid' => 'grp111DC5-2D2EA8CB4'
+                'identifier' => 'grp111DC5-2D2EA8CB4'
             ],
         ], $groups);
     }

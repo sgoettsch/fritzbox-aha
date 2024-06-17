@@ -8,11 +8,11 @@ use GuzzleHttp\Psr7\Response;
 use sgoettsch\FritzboxAHA\FritzboxAHA;
 use sgoettsch\FritzboxAHA\FritzboxAHADevice;
 
-class FritzboxAHADeviceListTest extends \PHPUnit\Framework\TestCase
+class FritzboxAHAGetDeviceTest extends \PHPUnit\Framework\TestCase
 {
     protected array $data;
 
-    public function testDeviceList(): void
+    public function testGetDevice(): void
     {
         $client = new ClientFake();
 
@@ -27,14 +27,12 @@ class FritzboxAHADeviceListTest extends \PHPUnit\Framework\TestCase
 
         $aha->login("fritz.box", "success", 'pass');
 
-        $devices = $aha->getAllDevices();
+        $device = $aha->getDevice('11111 1234567');
 
         $xml = simplexml_load_string($deviceList);
 
         $testDevice = new FritzboxAHADevice($xml->device);
 
-        $this->assertEquals([
-            $testDevice,
-        ], $devices);
+        $this->assertEquals($testDevice, $device);
     }
 }

@@ -1,6 +1,5 @@
 parameters:
 	level: 8
-	checkMissingIterableValueType: false
 	paths:
 		- src
 
@@ -10,5 +9,5 @@ parameters:
 	        - ./examples/*
 	        - ./tests/*
 
-	scanDirectories:
-	    - ./vendor/
+	ignoreErrors:
+		- identifier: missingType.iterableValue
