@@ -14,7 +14,7 @@ class FritzboxAHADevice
     private ?int $batteryLevel = null;
     private ?FritzboxAHADeviceTypes $deviceType;
     private string $firmwareVersion;
-    private ?int $functionBitmask;
+    private int $functionBitmask;
     private string $identifier;
     private bool $isBatteryLevelLow;
     private bool $isPresent;
