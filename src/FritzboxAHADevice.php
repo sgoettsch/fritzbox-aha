@@ -25,6 +25,9 @@ class FritzboxAHADevice
     private ?float $measuredTemperature;
     private string $productName;
     private ?float $targetTemperature;
+    private ?int $voltage;
+    private ?int $power;
+    private ?int $energy;
 
     public function __construct(
         SimpleXMLElement $data
@@ -44,6 +47,10 @@ class FritzboxAHADevice
         $this->setMeasuredTemperature($data);
         $this->setProductName($data);
         $this->setTargetTemperature($data);
+
+        $this->setVoltage($data);
+        $this->setPower($data);
+        $this->setEnergy($data);
     }
 
     public function getBatteryLevel(): ?int
@@ -104,6 +111,21 @@ class FritzboxAHADevice
     public function getTargetTemperature(): ?float
     {
         return $this->targetTemperature;
+    }
+
+    public function getVoltage(): ?int
+    {
+        return $this->voltage;
+    }
+
+    public function getPower(): ?int
+    {
+        return $this->power;
+    }
+
+    public function getEnergy(): ?int
+    {
+        return $this->energy;
     }
 
     public function isBatteryLevelLow(): bool
@@ -234,5 +256,41 @@ class FritzboxAHADevice
                 $this->targetTemperature = null;
                 break;
         }
+    }
+
+    private function setVoltage(SimpleXMLElement $data): void
+    {
+        $value = $data?->powermeter?->voltage ?? null;
+
+        if (is_null($value)) {
+            $this->voltage = null;
+            return;
+        }
+
+        $this->voltage = (int) $value;
+    }
+
+    private function setPower(SimpleXMLElement $data): void
+    {
+        $value = $data?->powermeter?->power ?? null;
+
+        if (is_null($value)) {
+            $this->power = null;
+            return;
+        }
+
+        $this->power = (int) $value;
+    }
+
+    private function setEnergy(SimpleXMLElement $data): void
+    {
+        $value = $data?->powermeter?->energy ?? null;
+
+        if (is_null($value)) {
+            $this->energy = null;
+            return;
+        }
+
+        $this->energy = (int) $value;
     }
 }
