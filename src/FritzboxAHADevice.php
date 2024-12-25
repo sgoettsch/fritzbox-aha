@@ -151,7 +151,7 @@ class FritzboxAHADevice
         $this->deviceType = match ($this->getFunctionBitmask()) {
             35712 => FritzboxAHADeviceTypes::FRITZ_DECT_200,
             320 => FritzboxAHADeviceTypes::FRITZ_DECT_300,
-            1048864 => FritzboxAHADeviceTypes::FRITZ_DECT_440,
+            3146016 => FritzboxAHADeviceTypes::FRITZ_DECT_440,
             237572 => FritzboxAHADeviceTypes::FRITZ_DECT_500,
             default => null,
         };
@@ -160,7 +160,7 @@ class FritzboxAHADevice
     private function setHasBattery(): void
     {
         $this->hasBattery = match ($this->getFunctionBitmask()) {
-            320, 1048864 => true,
+            320, 3146016 => true,
             default => false,
         };
     }
@@ -168,7 +168,7 @@ class FritzboxAHADevice
     private function setHumidity(SimpleXMLElement $data): void
     {
         $this->humidity = match ($this->getFunctionBitmask()) {
-            1048864 => (int)$data->humidity->rel_humidity->__toString(),
+            3146016 => (int)$data->humidity->rel_humidity->__toString(),
             default => null,
         };
     }
@@ -205,7 +205,7 @@ class FritzboxAHADevice
     private function setMeasuredTemperature(SimpleXMLElement $data): void
     {
         $this->measuredTemperature = match ($this->getFunctionBitmask()) {
-            320, 35712, 1048864 => (float)$data->temperature->celsius->__toString() / 10,
+            320, 35712, 3146016 => (float)$data->temperature->celsius->__toString() / 10,
             default => null,
         };
     }
