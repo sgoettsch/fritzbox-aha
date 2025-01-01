@@ -150,7 +150,7 @@ class FritzboxAHA
      * @return list<FritzboxAHADevice>
      * @throws GuzzleException|Exception
      */
-    public function getAllDevices(): array
+    public function getAllDevices(bool $forceRefresh = false): array
     {
         if (!empty($this->devices)) {
             return $this->devices;
