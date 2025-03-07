@@ -1,6 +1,7 @@
 <?php
 
 /** @noinspection PhpUnused */
+
 /** @noinspection SpellCheckingInspection */
 
 declare(strict_types=1);
@@ -13,6 +14,8 @@ class FritzboxAHADevice
 {
     private ?int $batteryLevel = null;
     private ?FritzboxAHADeviceTypes $deviceType;
+    /** @var int|null watt-hours consumed since installation */
+    private ?int $energy;
     private string $firmwareVersion;
     private int $functionBitmask;
     private string $identifier;
@@ -23,8 +26,12 @@ class FritzboxAHADevice
     private string $name;
     private string $manufacturer;
     private ?float $measuredTemperature;
+
+    /** @var float|null power in watt */
+    private ?float $power;
     private string $productName;
     private ?float $targetTemperature;
+    private ?float $voltage;
 
     public function __construct(
         SimpleXMLElement $data
@@ -34,6 +41,7 @@ class FritzboxAHADevice
         $this->setHasBattery();
 
         $this->setBatteryLevel($data);
+        $this->setEnergy($data);
         $this->setFirmwareVersion($data);
         $this->setHumidity($data);
         $this->setIdentifier($data);
@@ -42,8 +50,10 @@ class FritzboxAHADevice
         $this->setName($data);
         $this->setManufacturer($data);
         $this->setMeasuredTemperature($data);
+        $this->setPower($data);
         $this->setProductName($data);
         $this->setTargetTemperature($data);
+        $this->setVoltage($data);
     }
 
     public function getBatteryLevel(): ?int
@@ -61,9 +71,9 @@ class FritzboxAHADevice
         return $this->hasBattery;
     }
 
-    public function getHumidity(): ?int
+    public function getEnergy(): ?int
     {
-        return $this->humidity;
+        return $this->energy;
     }
 
     public function getFirmwareVersion(): string
@@ -74,6 +84,11 @@ class FritzboxAHADevice
     public function getFunctionBitmask(): ?int
     {
         return $this->functionBitmask;
+    }
+
+    public function getHumidity(): ?int
+    {
+        return $this->humidity;
     }
 
     public function getDeviceType(): ?FritzboxAHADeviceTypes
@@ -96,6 +111,11 @@ class FritzboxAHADevice
         return $this->measuredTemperature;
     }
 
+    public function getPower(): ?float
+    {
+        return $this->power;
+    }
+
     public function getProductName(): string
     {
         return $this->productName;
@@ -104,6 +124,11 @@ class FritzboxAHADevice
     public function getTargetTemperature(): ?float
     {
         return $this->targetTemperature;
+    }
+
+    public function getVoltage(): ?float
+    {
+        return $this->voltage;
     }
 
     public function isBatteryLevelLow(): bool
@@ -130,6 +155,18 @@ class FritzboxAHADevice
             $isBatteryLevelLow = $data->batterylow->__toString();
             $this->isBatteryLevelLow = (int)$isBatteryLevelLow === 1;
         }
+    }
+
+    private function setEnergy(SimpleXMLElement $data): void
+    {
+        $value = $data->powermeter->energy ?? null;
+
+        if (!is_null($value)) {
+            $this->energy = (int)$value;
+            return;
+        }
+
+        $this->energy = null;
     }
 
     private function setFirmwareVersion(SimpleXMLElement $data): void
@@ -210,6 +247,17 @@ class FritzboxAHADevice
         };
     }
 
+    private function setPower(SimpleXMLElement $data): void
+    {
+        $value = $data->powermeter->power ?? null;
+        if (!is_null($value)) {
+            $this->power = (float) ((int)$value / 1000);
+            return;
+        }
+
+        $this->power = null;
+    }
+
     private function setProductName(SimpleXMLElement $data): void
     {
         if (isset($data['productname'])) {
@@ -221,18 +269,29 @@ class FritzboxAHADevice
     {
         switch ($this->getFunctionBitmask()) {
             case 320:
-                $targetTemperature = (int) $data->hkr->tsoll->__toString();
+                $targetTemperature = (int)$data->hkr->tsoll->__toString();
                 if ($targetTemperature === 253) {
                     // disabled, not heating
                     $this->targetTemperature = -1.0;
                     return;
                 }
 
-                $this->targetTemperature = (float) ($targetTemperature / 2);
+                $this->targetTemperature = (float)($targetTemperature / 2);
                 break;
             default:
                 $this->targetTemperature = null;
                 break;
         }
+    }
+
+    private function setVoltage(SimpleXMLElement $data): void
+    {
+        $value = $data->powermeter->voltage ?? null;
+        if (!is_null($value)) {
+            $this->voltage = (float)((int)$value / 100);
+            return;
+        }
+
+        $this->voltage = null;
     }
 }
