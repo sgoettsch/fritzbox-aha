@@ -150,9 +150,9 @@ class FritzboxAHA
      * @return list<FritzboxAHADevice>
      * @throws GuzzleException|Exception
      */
-    public function getAllDevices(): array
+    public function getAllDevices(bool $skipCache = false): array
     {
-        if (!empty($this->devices)) {
+        if (!empty($this->devices) && !$skipCache) {
             return $this->devices;
         }
 
