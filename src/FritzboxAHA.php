@@ -53,16 +53,22 @@ class FritzboxAHA
         $this->setSid($this->getSessionId());
     }
 
+    /**
+     * @throws Exception
+     */
     public function getChallengeResponse(string $challenge): string
     {
-        return $challenge . "-" .
-            md5(
-                mb_convert_encoding(
-                    $challenge . "-" . $this->password,
-                    "UTF-16LE",
-                    "UTF-8"
-                )
-            );
+        $converted = mb_convert_encoding(
+            $challenge . "-" . $this->password,
+            "UTF-16LE",
+            "UTF-8"
+        );
+
+        if (!is_string($converted)) {
+            throw new Exception('Could not get challenge');
+        }
+
+        return $challenge . "-" . md5($converted);
     }
 
     /**
@@ -222,7 +228,7 @@ class FritzboxAHA
      *
      * $temp can be:
      * - 8 - 28 to set to this degree
-     * - 254 = ON , 253 = OFF
+     * - 254 = ON, 253 = OFF
      *
      * @throws Exception|GuzzleException
      */
