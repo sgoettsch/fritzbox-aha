@@ -1,5 +1,7 @@
 {
   "name": "sgoettsch/fritzbox-aha",
+  "schedule": "* * * * 5",
+  "automergeSchedule": ["at any time"],
   "type": "library",
   "license": "MIT",
   "autoload": {
