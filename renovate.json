@@ -36,5 +36,18 @@
       ],
       "allowedVersions": "<11"
     }
+  ],
+  "customManagers": [
+    {
+      "fileMatch": [
+        "^composer.json$"
+      ],
+      "matchStrings": [
+        "(ghcr.io)\/(?<depName>[a-z\/-]+)(?::(?<currentValue>[a-z0-9.-]+))?(?:@(?<currentDigest>sha256:[a-f0-9]+))?"
+      ],
+      "depNameTemplate": "ghcr.io/{{depName}}",
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
   ]
 }

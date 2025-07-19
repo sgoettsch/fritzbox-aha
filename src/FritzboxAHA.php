@@ -53,9 +53,6 @@ class FritzboxAHA
         $this->setSid($this->getSessionId());
     }
 
-    /**
-     * @throws Exception
-     */
     public function getChallengeResponse(string $challenge): string
     {
         $converted = mb_convert_encoding(
