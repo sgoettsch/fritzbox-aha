@@ -64,10 +64,6 @@ class FritzboxAHA
             "UTF-8"
         );
 
-        if (!is_string($converted)) {
-            throw new Exception('Could not get challenge');
-        }
-
         return $challenge . "-" . md5($converted);
     }
 

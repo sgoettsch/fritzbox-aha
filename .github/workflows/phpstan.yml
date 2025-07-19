@@ -2,7 +2,7 @@ name: PHPStan
 
 on:
   pull_request:
-  merge_group:
+    types: [opened, synchronize, reopened]
   push:
     branches:
       - 'renovate/**'
