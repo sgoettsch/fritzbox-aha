@@ -29,7 +29,7 @@
     "unittest": "php vendor/bin/phpunit --fail-on-deprecation",
     "phpcs": "php vendor/bin/phpcs",
     "codeStyle:fix": "docker run --rm -v %CD%\\\\:/data cytopia/php-cs-fixer fix .",
-    "code:check": "docker run --rm --mount type=bind,src=%CD%\\\\,target=/app ghcr.io/sgoettsch/docker-phpstan:latest-php8.1@sha256:804b76dadc962df84c7629f3af2b1bf81d0f99a29d0d7cfd8848a1931413fefc analyse /app",
+    "code:check": "docker run --rm --mount type=bind,src=%CD%\\\\,target=/app ghcr.io/sgoettsch/docker-phpstan:latest-php8.1@sha256:1380890ae52c7bbbd853ea2b8de5805c56bb2656c4ca01ee7afb32b84fbc7a6b analyse /app",
     "test:all": [
       "composer unittest",
       "composer phpcs",
